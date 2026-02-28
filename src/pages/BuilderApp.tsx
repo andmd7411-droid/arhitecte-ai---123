@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Code2, Layout, Type, Square, MousePointer2, Copy, Check, Download,
-    Terminal, Layers, Settings2, Monitor, Smartphone, Tablet, Trash2,
-    RotateCcw, Sparkles, Zap, Box, ArrowUp, ArrowDown, ChevronDown,
+    Trash2, RotateCcw, Sparkles, Zap, Box, ArrowUp, ArrowDown, ChevronDown,
     Play, Upload, Undo2, Redo2, Image, ToggleLeft, AlignLeft, AlignCenter,
     AlignRight, Palette, Columns, Wand2, Sun, Moon, RefreshCw, Globe,
-    Search, FolderOpen, Save, ZoomIn, ZoomOut, X, MessageSquare, Activity, CheckCircle2, AlertTriangle, Send
+    Search, FolderOpen, Save, ZoomIn, ZoomOut, X, MessageSquare, Activity,
+    CheckCircle2, AlertTriangle, Send, ShoppingBag, User, Calendar,
+    LayoutList, Terminal, Waves, PenTool, Layers, Settings2, Smartphone, Monitor, Tablet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -43,15 +44,26 @@ interface CanvasElement {
 
 type Theme = 'dark' | 'light' | 'purple' | 'ocean' | 'sunset' | 'glass';
 
+interface BrandKit {
+    primary: string;
+    secondary: string;
+    accent: string;
+    radius: number;
+    font: 'sans' | 'mono' | 'serif' | 'display';
+    glass: boolean;
+}
+
 interface AppState {
     elements: CanvasElement[];
     theme: Theme;
     columns: 1 | 2 | 3;
+    brand: BrandKit;
 }
 
 interface Project {
     id: string;
     name: string;
+    icon: any;
     state: AppState;
     savedAt: string;
 }
@@ -117,46 +129,189 @@ const defaultLabel: Record<ElementType, string> = {
     card: 'Card Title', navbar: 'My App', hero: 'Welcome to My App', image: 'https://picsum.photos/600/300',
 };
 
+const PREMADE_PROJECTS: Project[] = [
+    {
+        id: 'P1', name: 'SaaS Power-Up', icon: Zap,
+        state: {
+            theme: 'dark', columns: 1,
+            brand: { primary: '#a855f7', secondary: '#6366f1', accent: '#f472b6', radius: 16, font: 'sans', glass: true },
+            elements: [
+                { id: 'S1-1', type: 'navbar', label: 'NEURAL-LINK', props: { ...defaultProps, blur: 12, shadow: 'glow' } },
+                { id: 'S1-2', type: 'hero', label: 'Scale Beyond Limits', props: { ...defaultProps, fontSize: '2xl', align: 'center' } },
+                { id: 'S1-3', type: 'card', label: 'Ready to sync?', props: { ...defaultProps, shadow: 'soft' } },
+                { id: 'S1-4', type: 'button', label: 'Get Started', props: { ...defaultProps, bg: '#a855f7' } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    },
+    {
+        id: 'P2', name: 'Glass Storefront', icon: ShoppingBag,
+        state: {
+            theme: 'glass', columns: 1,
+            brand: { primary: '#0ea5e9', secondary: '#0284c7', accent: '#f472b6', radius: 24, font: 'sans', glass: true },
+            elements: [
+                { id: 'S2-1', type: 'navbar', label: 'MODERN-MINT', props: { ...defaultProps, blur: 20 } },
+                { id: 'S2-2', type: 'card', label: 'Premium Watch', props: { ...defaultProps, shadow: 'deep' } },
+                { id: 'S2-3', type: 'badge', label: 'Limited Edition', props: { ...defaultProps } },
+                { id: 'S2-4', type: 'button', label: 'Buy Now', props: { ...defaultProps, bg: '#0ea5e9' } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    },
+    {
+        id: 'P3', name: 'Pro Portfolio', icon: User,
+        state: {
+            theme: 'dark', columns: 1,
+            brand: { primary: '#fbbf24', secondary: '#f59e0b', accent: '#fff', radius: 12, font: 'display', glass: true },
+            elements: [
+                { id: 'S3-1', type: 'hero', label: 'Creative Architect', props: { ...defaultProps, align: 'center', fontSize: '2xl' } },
+                { id: 'S3-2', type: 'card', label: 'Project Alpha', props: { ...defaultProps, shadow: 'medium' } },
+                { id: 'S3-3', type: 'card', label: 'Project Beta', props: { ...defaultProps, shadow: 'medium' } },
+                { id: 'S3-4', type: 'button', label: 'Contact Me', props: { ...defaultProps, bg: '#fbbf24', borderColor: '#fff' } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    },
+    {
+        id: 'P4', name: 'Event Landing', icon: Calendar,
+        state: {
+            theme: 'dark', columns: 1,
+            brand: { primary: '#f43f5e', secondary: '#e11d48', accent: '#fff', radius: 20, font: 'display', glass: true },
+            elements: [
+                { id: 'S4-1', type: 'navbar', label: 'GEN-Z CON', props: { ...defaultProps, bg: '#f43f5e', shadow: 'soft' } },
+                { id: 'S4-2', type: 'hero', label: 'The Future is Here', props: { ...defaultProps, align: 'center' } },
+                { id: 'S4-3', type: 'button', label: 'Register Now', props: { ...defaultProps, bg: '#f43f5e' } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    },
+    {
+        id: 'P5', name: 'Crypto Dashboard', icon: LayoutList,
+        state: {
+            theme: 'sunset', columns: 1,
+            brand: { primary: '#f97316', secondary: '#ea580c', accent: '#fff', radius: 10, font: 'mono', glass: true },
+            elements: [
+                { id: 'S5-1', type: 'hero', label: 'Yield Master', props: { ...defaultProps, gradient: 'from-orange-500 to-rose-500' } },
+                { id: 'S5-2', type: 'card', label: 'Staking Pool', props: { ...defaultProps, shadow: 'deep' } },
+                { id: 'S5-3', type: 'button', label: 'Connect Wallet', props: { ...defaultProps, bg: '#f97316' } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    },
+    {
+        id: 'P6', name: 'News Terminal', icon: Terminal,
+        state: {
+            theme: 'dark', columns: 1,
+            brand: { primary: '#ef4444', secondary: '#333', accent: '#fff', radius: 4, font: 'mono', glass: false },
+            elements: [
+                { id: 'S6-1', type: 'navbar', label: 'DEV CHRONICLE', props: { ...defaultProps, bg: '#000', borderColor: '#333' } },
+                { id: 'S6-2', type: 'badge', label: 'Breaking News', props: { ...defaultProps, bg: '#ef4444' } },
+                { id: 'S6-3', type: 'card', label: 'AI becomes sentient', props: { ...defaultProps, shadow: 'medium' } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    },
+    {
+        id: 'P7', name: 'Oceanic Spa', icon: Waves,
+        state: {
+            theme: 'ocean', columns: 1,
+            brand: { primary: '#0891b2', secondary: '#0e7490', accent: '#fff', radius: 40, font: 'serif', glass: true },
+            elements: [
+                { id: 'S7-1', type: 'hero', label: 'Breathe Deeply', props: { ...defaultProps, fontSize: '2xl', align: 'center' } },
+                { id: 'S7-2', type: 'card', label: 'Detox Treatment', props: { ...defaultProps, padding: 24 } },
+                { id: 'S7-3', type: 'button', label: 'Book Now', props: { ...defaultProps, bg: '#06b6d4' } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    },
+    {
+        id: 'P8', name: 'Minimalist Blog', icon: PenTool,
+        state: {
+            theme: 'light', columns: 1,
+            brand: { primary: '#111', secondary: '#444', accent: '#000', radius: 0, font: 'serif', glass: false },
+            elements: [
+                { id: 'S8-1', type: 'navbar', label: 'THOUGHTS', props: { ...defaultProps, color: '#000' } },
+                { id: 'S8-2', type: 'text', label: 'A collection of stories.', props: { ...defaultProps, fontSize: 'xl', align: 'left' } },
+                { id: 'S8-3', type: 'divider', label: '', props: { ...defaultProps } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    },
+    {
+        id: 'P9', name: 'Purple Night', icon: Moon,
+        state: {
+            theme: 'purple', columns: 1,
+            brand: { primary: '#a855f7', secondary: '#7e22ce', accent: '#fff', radius: 32, font: 'display', glass: true },
+            elements: [
+                { id: 'S9-1', type: 'navbar', label: 'NEON', props: { ...defaultProps, bg: '#581c87' } },
+                { id: 'S9-2', type: 'card', label: 'Cyber Deck', props: { ...defaultProps, shadow: 'glow' } },
+                { id: 'S9-3', type: 'button', label: 'Enter Matrix', props: { ...defaultProps, bg: '#a855f7', shadow: 'glow' } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    },
+    {
+        id: 'P10', name: 'Glass Admin', icon: Layout,
+        state: {
+            theme: 'dark', columns: 1,
+            brand: { primary: '#3b82f6', secondary: '#1e40af', accent: '#60a5fa', radius: 12, font: 'sans', glass: true },
+            elements: [
+                { id: 'S10-1', type: 'navbar', label: 'OS-LINK', props: { ...defaultProps, blur: 16 } },
+                { id: 'S10-2', type: 'card', label: 'System Health', props: { ...defaultProps, shadow: 'soft' } },
+                { id: 'S10-3', type: 'badge', label: 'Online', props: { ...defaultProps, bg: '#10b981' } }
+            ]
+        },
+        savedAt: new Date().toISOString()
+    }
+];
+
 // ─── Code generators ──────────────────────────────────────────────────────────
 
-function renderElementCode(el: CanvasElement): string {
+function renderElementCode(el: CanvasElement, brand?: BrandKit): string {
     const p = el.props;
-    const r = `rounded-[${p.radius || 16}px]`;
-    const pa = `p-${p.padding || 4}`;
+    const br = brand?.radius ?? p.radius ?? 16;
+    const r = `rounded - [${br}px]`;
+    const pa = `p - ${p.padding || 4} `;
+    const fontClass = brand?.font === 'mono' ? 'font-mono' : brand?.font === 'serif' ? 'font-serif' : brand?.font === 'display' ? 'font-display' : '';
+
     switch (el.type) {
-        case 'button': return `<button className="${pa} ${r} ${getProfessionalStyles(p)} bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all">${el.label}</button>`;
-        case 'input': return `<input className="w-full ${pa} ${r} ${getProfessionalStyles(p)} border border-white/10 bg-white/5 outline-none" placeholder="${el.label}" />`;
-        case 'textarea': return `<textarea className="w-full ${pa} ${r} ${getProfessionalStyles(p)} border border-white/10 bg-white/5 outline-none resize-none" rows={4} placeholder="${el.label}" />`;
-        case 'text': return `<p className="text-${p.fontSize || 'base'} text-${p.align || 'left'} ${getProfessionalStyles(p)}">${el.label}</p>`;
-        case 'select': return `<select className="w-full ${pa} ${r} ${getProfessionalStyles(p)} border border-white/10 bg-white/5 outline-none"><option>${el.label}</option></select>`;
-        case 'toggle': return `<label className="flex items-center gap-3 cursor-pointer ${getProfessionalStyles(p)}"><input type="checkbox" className="sr-only" /><div className="w-10 h-5 bg-indigo-600 rounded-full" /><span>${el.label}</span></label>`;
-        case 'badge': return `<span className="${pa} ${r} ${getProfessionalStyles(p)} bg-indigo-500/20 text-indigo-400 text-xs font-bold uppercase tracking-widest inline-block">${el.label}</span>`;
-        case 'divider': return `<hr className="border-white/10 my-4" />`;
-        case 'card': return `<div className="${pa} ${r} ${getProfessionalStyles(p)} border border-white/5 bg-white/[0.02] shadow-xl"><h3 className="font-bold text-lg mb-2">${el.label}</h3><p className="text-sm text-gray-500">Professional card component.</p></div>`;
-        case 'navbar': return `<nav className="${pa} ${r} ${getProfessionalStyles(p)} flex items-center justify-between border border-white/5 bg-white/[0.02]"><span className="font-black italic uppercase">${el.label}</span><div className="flex gap-4 text-sm"><a href="#">Home</a><a href="#">Features</a><a href="#">Solutions</a></div></nav>`;
-        case 'hero': return `<section className="${pa} ${r} ${getProfessionalStyles(p)} text-center border border-white/5 bg-white/[0.02]"><h1 className="text-4xl font-black italic uppercase mb-4">${el.label}</h1><p className="text-gray-400 mb-6">Build next-gen interfaces with our AI-powered architect tools.</p><button className="px-8 py-3 bg-indigo-600 rounded-2xl font-bold">Launch Experience</button></section>`;
-        case 'image': return `<img src="${el.label}" alt="img" className="${r} ${getProfessionalStyles(p)} w-full object-cover h-[220px]" />`;
+        case 'button': return `<button class="${pa} ${r} ${fontClass} ${getProfessionalStyles(p, brand)} bg-[${brand?.primary || '#4f46e5'}] hover:opacity-90 text-white font-bold transition-all">${el.label}</button>`;
+        case 'input': return `<input class="w-full ${pa} ${r} ${fontClass} ${getProfessionalStyles(p, brand)} border border-white/10 bg-white/5 outline-none" placeholder="${el.label}" />`;
+        case 'textarea': return `<textarea class="w-full ${pa} ${r} ${fontClass} ${getProfessionalStyles(p, brand)} border border-white/10 bg-white/5 outline-none" placeholder="${el.label}"></textarea>`;
+        case 'text': return `<p class="${fontClass} ${getProfessionalStyles(p, brand)} text-[${p.fontSize || 'base'}] text-${p.align || 'left'}">${el.label}</p>`;
+        case 'select': return `<select class="w-full ${pa} ${r} ${fontClass} ${getProfessionalStyles(p, brand)} border border-white/10 bg-white/5 outline-none"><option>${el.label}</option></select>`;
+        case 'toggle': return `<div class="flex items-center gap-2 ${fontClass}"><div class="w-10 h-6 bg-white/20 rounded-full"></div><span>${el.label}</span></div>`;
+        case 'badge': return `<span class="px-2 py-1 text-xs font-medium ${r} bg-[${p.bg || brand?.secondary || '#6366f1'}]/20 text-[${p.bg || brand?.secondary || '#6366f1'}] border border-[${p.bg || brand?.secondary || '#6366f1'}]/30">${el.label}</span>`;
+        case 'divider': return `<hr class="border-white/10 my-4" />`;
+        case 'card': return `<div class="p-6 ${r} ${fontClass} ${getProfessionalStyles(p, brand)} border border-white/10 bg-white/5"><h3 class="text-lg font-bold mb-2">${el.label}</h3><p class="text-white/60 text-sm">Sample content for this card component.</p></div>`;
+        case 'navbar': return `<nav class="w-full ${pa} ${fontClass} ${getProfessionalStyles(p, brand)} border-b border-white/10 bg-white/5 flex items-center justify-between"><span class="font-bold text-xl">${el.label}</span><div class="flex gap-4"><span class="text-sm opacity-60">Home</span><span class="text-sm opacity-60">About</span></div></nav>`;
+        case 'hero': return `<section class="w-full py-20 px-6 ${r} ${fontClass} ${getProfessionalStyles(p, brand)} text-${p.align || 'center'} bg-gradient-to-br ${p.gradient || 'from-white/5 to-white/0'} border border-white/10"><h1 class="text-4xl font-black mb-4">${el.label}</h1><p class="text-xl opacity-70 max-w-2xl mx-auto">Experience the next generation of digital architecture with our neural-driven design system.</p></section>`;
+        case 'image': return `<img src="${p.imageUrl || 'https://picsum.photos/800/400'}" class="w-full h-auto ${r} border border-white/10 shadow-lg" alt="${el.label}" />`;
         default: return '';
     }
 }
 
-function getProfessionalStyles(p: ElementProps): string {
+function getProfessionalStyles(p: ElementProps, brand?: BrandKit): string {
     const shadowMap = { none: '', soft: 'shadow-md', medium: 'shadow-lg', deep: 'shadow-2xl', glow: 'shadow-[0_0_20px_rgba(168,85,247,0.4)]' };
     let styles = '';
-    if (p.blur) styles += `backdrop-blur-[${p.blur}px] `;
-    if (p.opacity !== undefined) styles += `opacity-[${p.opacity / 100}] `;
+
+    // Core brand integration
+    if (brand?.glass) styles += 'backdrop-blur-md bg-white/5 border-white/10 ';
+
+    if (p.blur) styles += `backdrop - blur - [${p.blur}px]`;
+    if (p.opacity !== undefined) styles += `opacity - [${p.opacity / 100}]`;
     if (p.shadow && p.shadow !== 'none') styles += `${shadowMap[p.shadow]} `;
-    if (p.gradient) styles += `bg-gradient-to-r ${p.gradient} `;
+    if (p.gradient) styles += `bg - gradient - to - r ${p.gradient} `;
     return styles;
 }
 
-function generateHTMLExport(elements: CanvasElement[]): string {
-    const body = elements.map(el => `  ${renderElementCode(el)}`).join('\n\n');
-    return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>IA Architecte Export</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n  <style>body{background:#0a0a0b;color:#fff;font-family:sans-serif;padding:2rem}</style>\n</head>\n<body class="space-y-6 p-8">\n${body}\n</body>\n</html>`;
+function generateHTMLExport(elements: CanvasElement[], brand?: BrandKit): string {
+    const body = elements.map(el => `  ${renderElementCode(el, brand)} `).join('\n\n');
+    return `< !DOCTYPE html >\n < html lang = "en" >\n<head>\n < meta charset = "UTF-8" >\n < meta name = "viewport" content = "width=device-width, initial-scale=1.0" >\n < title > IA Architecte Export</title >\n < script src = "https://cdn.tailwindcss.com" ></script >\n < style > body{ background:#0a0a0b; color: #fff; font - family: sans - serif; padding: 2rem }</style >\n</head >\n < body class="space-y-6 p-8" >\n${body} \n</body >\n</html > `;
 }
 
-function generateTSX(elements: CanvasElement[]): string {
-    const body = elements.map(el => `    ${renderElementCode(el)}`).join('\n\n');
+function generateTSX(elements: CanvasElement[], brand?: BrandKit): string {
+    const body = elements.map(el => `    ${renderElementCode(el, brand)} `).join('\n\n');
     return `// Generated by IA ARHITECTE\nimport React from 'react';\n\nexport default function App() {\n  return (\n    <div className="p-8 space-y-6 bg-[#0a0a0b] min-h-screen text-white">\n${body}\n    </div>\n  );\n}`;
 }
 
@@ -253,7 +408,7 @@ function aiGenerateElements(prompt: string, counter: React.MutableRefObject<numb
             mk('text', 'PROJECT ALPHA', { fontSize: 'lg', align: 'left' }),
             mk('image', 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800', { radius: 32 }),
             mk('text', 'PROJECT BETA', { fontSize: 'lg', align: 'left' }),
-            mk('button', 'Collaborate', { radius: 0, border: '1px solid #fff', bg: 'transparent' })
+            mk('button', 'Collaborate', { radius: 0, borderColor: '#fff', bg: 'transparent' })
         ];
     }
 
@@ -378,7 +533,7 @@ function ElementPreview({ el, theme }: { el: CanvasElement; theme: Theme }) {
             );
             case 'text': return <p style={style}>{el.label}</p>;
             case 'select': return (
-                <select disabled style={{ ...style, background: p.bg || th.surface, color: p.color || th.text, display: 'block' }}>
+                <select disabled title="Element Preview Select" style={{ ...style, background: p.bg || th.surface, color: p.color || th.text, display: 'block' }}>
                     <option>{el.label}</option>
                 </select>
             );
@@ -503,17 +658,53 @@ function SortableLayerItem({ el, idx, selectedId, onSelect, onMove, onDuplicate,
 export default function BuilderApp() {
     const idCounter = useRef(0);
 
-    const loadSaved = (): AppState => {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) return JSON.parse(saved);
-        } catch { }
-        return { elements: [], theme: 'dark', columns: 1 };
-    };
+    const [state, _setStateRaw] = useState<AppState>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (!parsed.brand) {
+                parsed.brand = { primary: '#a855f7', secondary: '#6366f1', accent: '#f472b6', radius: 16, font: 'sans', glass: true };
+            }
+            return parsed;
+        }
+        return {
+            elements: [],
+            theme: 'dark',
+            columns: 1,
+            brand: { primary: '#a855f7', secondary: '#6366f1', accent: '#f472b6', radius: 16, font: 'sans', glass: true }
+        };
+    });
 
-    const [state, setStateRaw] = useState<AppState>(loadSaved);
     const [history, setHistory] = useState<AppState[]>([]);
     const [future, setFuture] = useState<AppState[]>([]);
+
+    // Update state with history tracking
+    const setState = useCallback((updater: AppState | ((prev: AppState) => AppState)) => {
+        _setStateRaw(prev => {
+            const next = typeof updater === 'function' ? updater(prev) : updater;
+            setHistory(h => [...h.slice(-49), prev]); // Keep history limited
+            setFuture([]);
+            return next;
+        });
+    }, []);
+
+    const undo = useCallback(() => {
+        if (history.length === 0) return;
+        const prev = history[history.length - 1];
+        setFuture(f => [state, ...f]);
+        setHistory(h => h.slice(0, -1));
+        _setStateRaw(prev);
+    }, [history, state]);
+
+    const redo = useCallback(() => {
+        if (future.length === 0) return;
+        const next = future[0];
+        setHistory(h => [...h, state]);
+        setFuture(f => f.slice(1));
+        _setStateRaw(next);
+    }, [future, state]);
+
+
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [rightActiveTab, setRightActiveTab] = useState<'props' | 'ai' | 'auditor'>('props');
     const [messages, setMessages] = useState<{ id: string; role: 'user' | 'assistant'; text: string }[]>([
@@ -528,6 +719,13 @@ export default function BuilderApp() {
     const [showAI, setShowAI] = useState(false);
     const [showThemes, setShowThemes] = useState(false);
     const [zoom, setZoom] = useState(1);
+    const [brand, setBrand] = useState<BrandKit>({
+        primary: '#a855f7', secondary: '#6366f1', accent: '#f472b6',
+        radius: 16, font: 'sans', glass: true
+    });
+
+    const [leftActiveTab, setLeftActiveTab] = useState<'elements' | 'templates' | 'layers' | 'brand'>('elements');
+
     const [search, setSearch] = useState('');
     const [showProjects, setShowProjects] = useState(false);
     const [projectName, setProjectName] = useState('My Project');
@@ -543,34 +741,6 @@ export default function BuilderApp() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }, [state]);
 
-    // Update state with history tracking
-    const setState = useCallback((updater: (prev: AppState) => AppState) => {
-        setStateRaw(prev => {
-            const next = updater(prev);
-            setHistory(h => [...h.slice(-49), prev]);
-            setFuture([]);
-            return next;
-        });
-    }, []);
-
-    // Undo / Redo
-    const undo = useCallback(() => {
-        if (!history.length) return;
-        const prev = history[history.length - 1];
-        setFuture(f => [state, ...f]);
-        setHistory(h => h.slice(0, -1));
-        setStateRaw(prev);
-        setSelectedId(null);
-    }, [history, state]);
-
-    const redo = useCallback(() => {
-        if (!future.length) return;
-        const next = future[0];
-        setHistory(h => [...h, state]);
-        setFuture(f => f.slice(1));
-        setStateRaw(next);
-        setSelectedId(null);
-    }, [future, state]);
 
 
 
@@ -638,16 +808,28 @@ export default function BuilderApp() {
 
     const saveProjectFn = useCallback(() => {
         setProjects(prev => {
-            const proj: Project = { id: Date.now().toString(), name: projectName, state, savedAt: new Date().toLocaleString() };
+            const proj: Project = { id: Date.now().toString(), name: projectName, icon: Layout, savedAt: new Date().toLocaleString(), state };
             const updated = [...prev.filter(p => p.name !== proj.name), proj];
             localStorage.setItem(PROJECTS_KEY, JSON.stringify(updated));
             return updated;
         });
     }, [projectName, state]);
 
-    const loadProject = (proj: Project) => { setStateRaw(proj.state); setProjectName(proj.name); setSelectedId(null); setShowProjects(false); };
+    const loadProject = (proj: Project) => { _setStateRaw(proj.state); setProjectName(proj.name); setSelectedId(null); setShowProjects(false); };
     const deleteProject = (id: string) => {
         setProjects(prev => { const u = prev.filter(p => p.id !== id); localStorage.setItem(PROJECTS_KEY, JSON.stringify(u)); return u; });
+    };
+
+    const loadPremadeProject = (p: typeof PREMADE_PROJECTS[0]) => {
+        setState(prev => ({
+            ...prev,
+            elements: p.state.elements,
+            theme: p.state.theme,
+            columns: p.state.columns,
+        }));
+        setProjectName(p.name);
+        setSelectedId(null);
+        setLeftActiveTab('layers'); // Switch to layers tab after loading
     };
 
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -797,6 +979,21 @@ export default function BuilderApp() {
     .tab-btn.active { background:${th.accent}; color:#fff; }
     .tab-btn:not(.active) { background:transparent; color:#666; }
     .tab-btn:not(.active):hover { background:${th.border}; color:${th.text}; }
+
+    /* Utility Classes to replace inline styles */
+    .flex-row { display:flex; align-items:center; }
+    .flex-center { display:flex; align-items:center; justify-content:center; }
+    .flex-between { display:flex; align-items:center; justify-content:space-between; }
+    .flex-col { display:flex; flex-direction:column; }
+    .gap-4 { gap: 4px; } .gap-6 { gap: 6px; } .gap-8 { gap: 8px; } .gap-12 { gap: 12px; } .gap-16 { gap: 16px; }
+    .ia-panel { position:absolute; background:${th.surface}; border:1px solid ${th.border}; border-radius:20px; padding:16px; z-index:999; boxShadow:0 20px 60px rgba(0,0,0,0.5); }
+    .ia-title { font-weight:900; font-size:15px; font-style:italic; text-transform:uppercase; letter-spacing:-0.02em; }
+    .ia-subtitle { font-size:9px; font-weight:800; color:#666; text-transform:uppercase; letter-spacing:.2em; }
+    .ia-card-preview { background:${th.surface}; padding:16px; border-radius:16px; border:1px solid ${th.border}; }
+    .ia-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .ia-grid-3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+    .text-accent { color:${th.accent}; }
+    .w-full { width:100%; }
   `;
 
     return (
@@ -806,35 +1003,35 @@ export default function BuilderApp() {
                 {/* ── Header ── */}
                 <header className="ia-header">
                     {/* Left: Logo + Undo/Redo */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ padding: '8px', background: `${th.accent}22`, borderRadius: 12, display: 'flex', alignItems: 'center', border: `1px solid ${th.accent}33` }}>
-                            <Code2 size={20} style={{ color: th.accent }} />
+                    <div className="flex-row gap-12">
+                        <div className="flex-center" style={{ padding: '8px', background: `${th.accent}22`, borderRadius: 12, border: `1px solid ${th.accent}33` }}>
+                            <Code2 size={20} className="text-accent" />
                         </div>
                         <div>
-                            <div style={{ fontWeight: 900, fontSize: 15, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>IA ARHITECTE</div>
-                            <div style={{ fontSize: 9, fontWeight: 800, color: '#666', textTransform: 'uppercase', letterSpacing: '.2em' }}>App Builder</div>
+                            <div className="ia-title">IA ARHITECTE</div>
+                            <div className="ia-subtitle">App Builder</div>
                         </div>
-                        <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+                        <div className="flex-row gap-4" style={{ marginLeft: 8 }}>
                             <button title="Undo (Ctrl+Z)" onClick={undo} disabled={!history.length} className="ia-btn ia-btn-ghost" style={{ opacity: history.length ? 1 : 0.3, padding: '6px 10px' }}><Undo2 size={15} /></button>
                             <button title="Redo (Ctrl+Y)" onClick={redo} disabled={!future.length} className="ia-btn ia-btn-ghost" style={{ opacity: future.length ? 1 : 0.3, padding: '6px 10px' }}><Redo2 size={15} /></button>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8, borderLeft: `1px solid ${th.border}`, paddingLeft: 12 }}>
-                            <input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="Project name" style={{ background: th.bg, border: `1px solid ${th.border}`, borderRadius: 8, padding: '5px 10px', color: th.text, outline: 'none', fontSize: 11, fontWeight: 700, width: 130 }} />
-                            <button title="Save Project (Ctrl+S)" onClick={saveProjectFn} className="ia-btn" style={{ padding: '6px 10px', borderRadius: 10, background: `${th.accent}22`, border: `1px solid ${th.accent}44`, color: th.accent, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Save size={13} /><span style={{ fontSize: 10, fontWeight: 800 }}>Save</span></button>
+                        <div className="flex-row gap-6" style={{ marginLeft: 8, borderLeft: `1px solid ${th.border}`, paddingLeft: 12 }}>
+                            <input value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="Project name" className="ia-input" style={{ width: 130, padding: '5px 10px', fontSize: 11, fontWeight: 700 }} />
+                            <button title="Save Project (Ctrl+S)" onClick={saveProjectFn} className="ia-btn flex-row gap-4" style={{ padding: '6px 10px', borderRadius: 10, background: `${th.accent}22`, border: `1px solid ${th.accent}44`, color: th.accent, cursor: 'pointer' }}><Save size={13} /><span style={{ fontSize: 10, fontWeight: 800 }}>Save</span></button>
                             <div style={{ position: 'relative' }}>
-                                <button title="Projects" onClick={() => setShowProjects(p => !p)} className="ia-btn" style={{ padding: '6px 10px', borderRadius: 10, background: showProjects ? `${th.accent}22` : 'transparent', border: `1px solid ${th.border}`, color: th.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><FolderOpen size={13} /><span style={{ fontSize: 10, fontWeight: 800 }}>{projects.length}</span></button>
+                                <button title="Projects" onClick={() => setShowProjects(p => !p)} className="ia-btn flex-row gap-4" style={{ padding: '6px 10px', borderRadius: 10, background: showProjects ? `${th.accent}22` : 'transparent', border: `1px solid ${th.border}`, color: th.text, cursor: 'pointer' }}><FolderOpen size={13} /><span style={{ fontSize: 10, fontWeight: 800 }}>{projects.length}</span></button>
                                 {showProjects && (
                                     <div style={{ position: 'absolute', top: 40, left: 0, width: 280, background: th.surface, border: `1px solid ${th.border}`, borderRadius: 16, padding: 12, zIndex: 999, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
                                         <div className="ia-label" style={{ marginBottom: 8 }}>Saved Projects ({projects.length})</div>
                                         {projects.length === 0 && <div style={{ fontSize: 11, color: '#555', textAlign: 'center', padding: '12px 0' }}>No saved projects yet.<br />Press Ctrl+S to save.</div>}
                                         {projects.map(p => (
-                                            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 8, marginBottom: 4, background: th.bg, border: `1px solid ${th.border}` }}>
+                                            <div key={p.id} className="flex-row gap-6" style={{ padding: '6px 8px', borderRadius: 8, marginBottom: 4, background: th.bg, border: `1px solid ${th.border}` }}>
                                                 <div style={{ flex: 1, overflow: 'hidden' }}>
                                                     <div style={{ fontSize: 11, fontWeight: 700, color: th.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
                                                     <div style={{ fontSize: 9, color: '#666' }}>{p.savedAt}</div>
                                                 </div>
                                                 <button onClick={() => loadProject(p)} className="ia-btn" style={{ padding: '4px 8px', borderRadius: 6, background: `${th.accent}22`, color: th.accent, border: `1px solid ${th.accent}33`, cursor: 'pointer', fontSize: 9, fontWeight: 800 }}>Load</button>
-                                                <button onClick={() => deleteProject(p.id)} className="ia-btn" style={{ padding: '4px 6px', borderRadius: 6, background: '#ef444411', color: '#ef4444', border: '1px solid #ef444422', cursor: 'pointer' }}><X size={10} /></button>
+                                                <button onClick={() => deleteProject(p.id)} title="Delete Project" className="ia-btn" style={{ padding: '4px 6px', borderRadius: 6, background: '#ef444411', color: '#ef4444', border: '1px solid #ef444422', cursor: 'pointer' }}><X size={10} /></button>
                                             </div>
                                         ))}
                                     </div>
@@ -844,8 +1041,8 @@ export default function BuilderApp() {
                     </div>
 
                     {/* Center: tabs + preview mode */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ display: 'flex', background: th.bg, borderRadius: 12, padding: 3, border: `1px solid ${th.border}`, gap: 2 }}>
+                    <div className="flex-row gap-8">
+                        <div className="flex-row gap-2" style={{ background: th.bg, borderRadius: 12, padding: 3, border: `1px solid ${th.border}` }}>
                             {(['canvas', 'code', 'preview'] as const).map(tab => (
                                 <button key={tab} className={`tab-btn ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
                                     {tab === 'canvas' ? <><Layout size={12} style={{ display: 'inline', marginRight: 4 }} /> Canvas</> : tab === 'code' ? <><Terminal size={12} style={{ display: 'inline', marginRight: 4 }} /> Code</> : <><Play size={12} style={{ display: 'inline', marginRight: 4 }} /> Preview</>}
@@ -853,16 +1050,16 @@ export default function BuilderApp() {
                             ))}
                         </div>
                         {activeTab === 'canvas' && (
-                            <div style={{ display: 'flex', background: th.bg, borderRadius: 12, padding: 3, border: `1px solid ${th.border}`, gap: 2 }}>
+                            <div className="flex-row gap-2" style={{ background: th.bg, borderRadius: 12, padding: 3, border: `1px solid ${th.border}` }}>
                                 {([{ id: 'desktop', I: Monitor }, { id: 'tablet', I: Tablet }, { id: 'mobile', I: Smartphone }] as const).map(({ id, I }) => (
                                     <button key={id} title={id} className={`tab-btn ${previewMode === id ? 'active' : ''}`} style={{ padding: '6px 10px' }} onClick={() => setPreviewMode(id as any)}><I size={14} /></button>
                                 ))}
                             </div>
                         )}
-                        <div style={{ display: 'flex', background: th.bg, borderRadius: 12, padding: 3, border: `1px solid ${th.border}`, gap: 2 }}>
+                        <div className="flex-row gap-2" style={{ background: th.bg, borderRadius: 12, padding: 3, border: `1px solid ${th.border}` }}>
                             <button title="Zoom Out (Ctrl+-)" onClick={() => setZoom(z => Math.max(z - 0.1, 0.3))} className="ia-btn ia-btn-ghost" style={{ padding: '6px 8px' }} aria-label="Zoom Out"><ZoomOut size={14} /></button>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 8px' }}>
-                                <span style={{ fontSize: 10, fontWeight: 800, color: th.accent, minWidth: 35, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
+                            <div className="flex-row gap-4" style={{ padding: '0 8px' }}>
+                                <span className="text-accent" style={{ fontSize: 10, fontWeight: 800, minWidth: 35, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
                                 <button title="Reset Zoom (Ctrl+0)" onClick={() => setZoom(1)} className="ia-btn ia-btn-ghost" style={{ padding: '4px' }} aria-label="Reset Zoom"><RotateCcw size={12} /></button>
                             </div>
                             <button title="Zoom In (Ctrl+=)" onClick={() => setZoom(z => Math.min(z + 0.1, 2.5))} className="ia-btn ia-btn-ghost" style={{ padding: '6px 8px' }} aria-label="Zoom In"><ZoomIn size={14} /></button>
@@ -870,9 +1067,9 @@ export default function BuilderApp() {
                     </div>
 
                     {/* Right: AI + Themes + Import + Download */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="flex-row gap-8">
                         <div style={{ position: 'relative' }}>
-                            <button title="AI Generation" className="ia-btn ia-btn-ghost" aria-label="Toggle AI Generation" style={{ display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${th.border}`, borderRadius: 12 }}
+                            <button title="AI Generation" className="ia-btn ia-btn-ghost flex-row gap-6" aria-label="Toggle AI Generation" style={{ border: `1px solid ${th.border}`, borderRadius: 12 }}
                                 onClick={() => setShowAI(p => !p)}>
                                 <Wand2 size={14} style={{ color: th.accent }} />
                                 <span style={{ fontSize: 11, fontWeight: 800 }}>AI Generate</span>
@@ -889,7 +1086,7 @@ export default function BuilderApp() {
                         </div>
 
                         <div style={{ position: 'relative' }}>
-                            <button title="Themes" className="ia-btn ia-btn-ghost" aria-label="Toggle Themes" style={{ display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${th.border}`, borderRadius: 12 }}
+                            <button title="Themes" className="ia-btn ia-btn-ghost flex-row gap-6" aria-label="Toggle Themes" style={{ border: `1px solid ${th.border}`, borderRadius: 12 }}
                                 onClick={() => setShowThemes(p => !p)}>
                                 <Palette size={14} style={{ color: th.accent }} />
                                 <span style={{ fontSize: 11, fontWeight: 800 }}>Theme</span>
@@ -929,7 +1126,7 @@ export default function BuilderApp() {
                                 <button onClick={copyCode} className="ia-btn ia-btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${th.border}`, borderRadius: 10 }}>
                                     {copied ? <Check size={14} /> : <Copy size={14} />} <span style={{ fontSize: 11, fontWeight: 800 }}>{copied ? 'Copied!' : 'Copy'}</span>
                                 </button>
-                                <button onClick={downloadCode} className="ia-btn ia-btn-accent">
+                                <button title="Download Code" onClick={downloadCode} className="ia-btn ia-btn-accent">
                                     <Download size={14} />
                                 </button>
                             </div>
@@ -963,75 +1160,186 @@ export default function BuilderApp() {
                     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                         {/* Left sidebar: components */}
                         <aside className="ia-sidebar ia-scroll">
-                            <div className="ia-section">
-                                <div className="ia-label" style={{ marginBottom: 8 }}>Elements</div>
-                                <div style={{ position: 'relative', marginBottom: 10 }}>
-                                    <Search size={12} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
-                                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search components..." style={{ background: th.bg, border: `1px solid ${th.border}`, borderRadius: 8, padding: '6px 10px 6px 28px', color: th.text, outline: 'none', fontSize: 11, width: '100%' }} />
-                                </div>
-                                {['Basic', 'Layout', 'Media'].map(group => (
-                                    <div key={group} style={{ marginBottom: 16 }}>
-                                        <div style={{ fontSize: 9, fontWeight: 800, color: '#555', textTransform: 'uppercase', letterSpacing: '.15em', marginBottom: 8 }}>{group}</div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
-                                            {COMPONENT_REGISTRY.filter(c => c.group === group && (!search || c.label.toLowerCase().includes(search.toLowerCase()))).map(c => {
-                                                const CI = c.icon;
-                                                return (
-                                                    <button key={c.type} className="comp-btn" onClick={() => addElement(c.type)} title={`Add ${c.label}`}>
-                                                        <CI size={18} />
-                                                        <span>{c.label}</span>
-                                                    </button>
-                                                );
-                                            })}
+                            {/* Tabs Header */}
+                            <div className="flex-row" style={{ borderBottom: `1px solid ${th.border}` }}>
+                                {(['elements', 'templates', 'brand', 'layers'] as const).map(tab => (
+                                    <button key={tab}
+                                        onClick={() => setLeftActiveTab(tab)}
+                                        className="flex-center"
+                                        style={{ flex: 1, padding: '12px', background: leftActiveTab === tab ? 'transparent' : `${th.bg}44`, border: 'none', borderBottom: leftActiveTab === tab ? `2px solid ${th.accent}` : '2px solid transparent', color: leftActiveTab === tab ? th.accent : '#666', cursor: 'pointer', fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>
+                                        {tab === 'brand' ? <Zap size={14} /> : tab}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {leftActiveTab === 'brand' && (
+                                <div className="ia-section ia-scroll">
+                                    <div className="ia-label" style={{ marginBottom: 12 }}>Neural Brand DNA</div>
+                                    <div className="ia-card" style={{ padding: 16, marginBottom: 16, background: `${th.accent}05` }}>
+                                        <div className="flex-row gap-8" style={{ marginBottom: 12 }}>
+                                            <Sparkles size={14} className="text-accent" />
+                                            <div style={{ fontSize: 11, fontWeight: 700 }}>Global Tokens</div>
+                                        </div>
+
+                                        <div className="flex-col gap-12">
+                                            <div>
+                                                <div className="ia-subtitle" style={{ marginBottom: 6 }}>Drive Aesthetics</div>
+                                                <div className="flex-row gap-6">
+                                                    {(['sans', 'display', 'mono'] as const).map(f => (
+                                                        <button key={f} onClick={() => setBrand(b => ({ ...b, font: f }))}
+                                                            style={{ flex: 1, padding: '8px', borderRadius: 8, fontSize: 10, fontWeight: 800, background: brand.font === f ? th.accent : th.bg, color: brand.font === f ? '#fff' : '#666', border: `1px solid ${brand.font === f ? th.accent : th.border}`, cursor: 'pointer', textTransform: 'capitalize' }}>
+                                                            {f}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div className="ia-subtitle" style={{ marginBottom: 6 }}>Global Radius ({brand.radius}px)</div>
+                                                <input type="range" min="0" max="64" value={brand.radius} onChange={e => setBrand(b => ({ ...b, radius: parseInt(e.target.value) }))} className="w-full h-4 bg-white/5 rounded-lg appearance-none cursor-pointer" />
+                                            </div>
+
+                                            <div className="ia-grid-2">
+                                                <div>
+                                                    <div className="ia-subtitle" style={{ marginBottom: 4 }}>Primary</div>
+                                                    <div className="flex-row gap-4">
+                                                        <input type="color" value={brand.primary} onChange={e => setBrand(b => ({ ...b, primary: e.target.value }))} style={{ width: 24, height: 24, border: 'none', borderRadius: 6, cursor: 'pointer' }} />
+                                                        <span style={{ fontSize: 9, opacity: 0.5, fontFamily: 'monospace' }}>{brand.primary}</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="ia-subtitle" style={{ marginBottom: 4 }}>Accent</div>
+                                                    <div className="flex-row gap-4">
+                                                        <input type="color" value={brand.accent} onChange={e => setBrand(b => ({ ...b, accent: e.target.value }))} style={{ width: 24, height: 24, border: 'none', borderRadius: 6, cursor: 'pointer' }} />
+                                                        <span style={{ fontSize: 9, opacity: 0.5, fontFamily: 'monospace' }}>{brand.accent}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button className="ia-btn" onClick={() => setBrand(b => ({ ...b, glass: !b.glass }))}
+                                                style={{ width: '100%', padding: '12px', background: brand.glass ? `${th.accent}22` : th.bg, color: brand.glass ? th.accent : '#666', border: `1px solid ${brand.glass ? th.accent : th.border}` }}>
+                                                {brand.glass ? 'Glassmorphism: ACTIVE' : 'Glassmorphism: OFF'}
+                                            </button>
                                         </div>
                                     </div>
-                                ))}
 
-                                <div style={{ marginTop: 20 }}>
-                                    <div style={{ fontSize: 9, fontWeight: 800, color: '#555', textTransform: 'uppercase', letterSpacing: '.15em', marginBottom: 8 }}>Smart Templates</div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                        {TEMPLATE_REGISTRY.map(t => (
-                                            <button key={t.label} className="ia-btn" onClick={() => addTemplate(t)}
-                                                style={{ width: '100%', padding: '10px 12px', borderRadius: 12, background: th.bg, border: `1px solid ${th.border}`, color: th.text, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <t.icon size={14} style={{ color: th.accent }} />
-                                                {t.label}
+                                    <button className="ia-btn flex-center gap-8" onClick={() => {
+                                        setState(prev => ({
+                                            ...prev,
+                                            brand: { ...prev.brand, radius: brand.radius },
+                                            elements: prev.elements.map(el => ({
+                                                ...el,
+                                                props: { ...el.props, radius: brand.radius }
+                                            }))
+                                        }));
+                                    }} style={{ width: '100%', padding: '14px', background: th.accent, color: '#fff', borderRadius: 12, fontWeight: 800 }}>
+                                        <RefreshCw size={14} /> Neural Sync Global
+                                    </button>
+                                    <div style={{ marginTop: 12, fontSize: 9, color: '#555', textAlign: 'center', fontStyle: 'italic' }}>
+                                        Applies BrandKit to all existing elements instantly.
+                                    </div>
+                                </div>
+                            )}
+
+                            {leftActiveTab === 'elements' && (
+                                <div className="ia-section">
+                                    <div className="ia-label" style={{ marginBottom: 8 }}>Elements</div>
+                                    <div style={{ position: 'relative', marginBottom: 10 }}>
+                                        <Search size={12} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+                                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search components..." className="ia-input" style={{ paddingLeft: 28 }} />
+                                    </div>
+                                    {['Basic', 'Layout', 'Media'].map(group => (
+                                        <div key={group} style={{ marginBottom: 16 }}>
+                                            <div className="ia-subtitle" style={{ marginBottom: 8 }}>{group}</div>
+                                            <div className="ia-grid-3">
+                                                {COMPONENT_REGISTRY.filter(c => c.group === group && (!search || c.label.toLowerCase().includes(search.toLowerCase()))).map(c => {
+                                                    const CI = c.icon;
+                                                    return (
+                                                        <button key={c.type} className="comp-btn" onClick={() => addElement(c.type)} title={`Add ${c.label}`}>
+                                                            <CI size={18} />
+                                                            <span>{c.label}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <div style={{ marginTop: 20 }}>
+                                        <div className="ia-subtitle" style={{ marginBottom: 8 }}>Smart Templates</div>
+                                        <div className="flex-col gap-6">
+                                            {TEMPLATE_REGISTRY.map(t => (
+                                                <button key={t.label} className="ia-btn flex-row gap-12" onClick={() => addTemplate(t)}
+                                                    style={{ width: '100%', padding: '10px 12px', borderRadius: 12, background: th.bg, border: `1px solid ${th.border}`, color: th.text, fontSize: 11, fontWeight: 700 }}>
+                                                    <t.icon size={14} className="text-accent" />
+                                                    {t.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {leftActiveTab === 'templates' && (
+                                <div className="ia-section">
+                                    <div className="ia-label" style={{ marginBottom: 12 }}>Project Library</div>
+                                    <div className="flex-col gap-8">
+                                        {PREMADE_PROJECTS.map(p => (
+                                            <button key={p.id} className="ia-btn flex-row gap-12" onClick={() => loadPremadeProject(p)}
+                                                style={{ width: '100%', padding: '14px 16px', borderRadius: 16, background: th.bg, border: `1px solid ${th.border}`, color: th.text, transition: 'all 0.2s', textAlign: 'left' }}>
+                                                <div className="flex-center" style={{ width: 40, height: 40, borderRadius: 12, background: `${th.accent}11`, border: `1px solid ${th.accent}22` }}>
+                                                    <p.icon size={20} className="text-accent" />
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 2 }}>{p.name}</div>
+                                                    <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: '.05em' }}>{p.state.theme} Theme • {p.state.elements.length} Elements</div>
+                                                </div>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
-                            <div className="ia-section" style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                                    <div className="ia-label">Layers ({elements.length})</div>
-                                    {elements.length > 0 && (
-                                        <button onClick={clearCanvas} className="ia-btn" style={{ fontSize: 9, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '.1em', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <RefreshCw size={10} /> Clear
-                                        </button>
-                                    )}
+                            {leftActiveTab === 'layers' && (
+                                <div className="ia-section" style={{ flex: 1 }}>
+                                    <div className="flex-between" style={{ marginBottom: 12 }}>
+                                        <div className="ia-label">Layers ({elements.length})</div>
+                                        {elements.length > 0 && (
+                                            <button onClick={clearCanvas} className="ia-btn flex-row gap-4" style={{ fontSize: 9, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '.1em', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                                <RefreshCw size={10} /> Clear
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-row gap-6" style={{ marginBottom: 12 }}>
+                                        {([1, 2, 3] as const).map(c => (
+                                            <button key={c} onClick={() => setColumns(c)} className="ia-btn flex-center" style={{ flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 10, fontWeight: 800, background: columns === c ? `${th.accent}22` : th.bg, color: columns === c ? th.accent : '#666', border: `1px solid ${columns === c ? `${th.accent}44` : th.border}`, cursor: 'pointer' }}>
+                                                <Columns size={11} style={{ marginRight: 3 }} />{c}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="ia-scroll" style={{ maxHeight: 300 }}>
+                                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                            <SortableContext items={elements.map(e => e.id)} strategy={verticalListSortingStrategy}>
+                                                {elements.map((el, idx) => (
+                                                    <SortableLayerItem key={el.id} el={el} idx={idx} selectedId={selectedId} th={th}
+                                                        onSelect={setSelectedId} onMove={moveElement} onDuplicate={duplicateElement} onDelete={deleteElement} />
+                                                ))}
+                                            </SortableContext>
+                                        </DndContext>
+                                        {elements.length === 0 && (
+                                            <div style={{ textAlign: 'center', padding: '24px 0', color: '#555', fontSize: 11 }}>
+                                                <MousePointer2 size={24} style={{ margin: '0 auto 8px', display: 'block', opacity: .3 }} />
+                                                Add elements from above
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                                    {([1, 2, 3] as const).map(c => (
-                                        <button key={c} onClick={() => setColumns(c)} className="ia-btn" style={{ flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 10, fontWeight: 800, background: columns === c ? `${th.accent}22` : th.bg, color: columns === c ? th.accent : '#666', border: `1px solid ${columns === c ? `${th.accent}44` : th.border}`, cursor: 'pointer' }}>
-                                            <Columns size={11} style={{ display: 'inline', marginRight: 3 }} />{c}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="ia-scroll" style={{ maxHeight: 300 }}>
-                                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                                        <SortableContext items={elements.map(e => e.id)} strategy={verticalListSortingStrategy}>
-                                            {elements.map((el, idx) => (
-                                                <SortableLayerItem key={el.id} el={el} idx={idx} selectedId={selectedId} th={th}
-                                                    onSelect={setSelectedId} onMove={moveElement} onDuplicate={duplicateElement} onDelete={deleteElement} />
-                                            ))}
-                                        </SortableContext>
-                                    </DndContext>
-                                    {elements.length === 0 && (
-                                        <div style={{ textAlign: 'center', padding: '24px 0', color: '#555', fontSize: 11 }}>
-                                            <MousePointer2 size={24} style={{ margin: '0 auto 8px', display: 'block', opacity: .3 }} />
-                                            Add elements from above
-                                        </div>
-                                    )}
-                                </div>
+                            )}
+
+                            <div className="flex-row gap-6" style={{ marginTop: 'auto', padding: 16, borderTop: `1px solid ${th.border}` }}>
+                                <Sparkles size={11} className="text-accent" style={{ opacity: 0.5 }} />
+                                <span className="ia-subtitle" style={{ color: '#554' }}>Live Neural Synthesis</span>
                             </div>
                         </aside>
 
@@ -1056,18 +1364,20 @@ export default function BuilderApp() {
                                     </SortableContext>
                                 </DndContext>
                             </div>
-                            <div style={{ marginTop: 16, fontSize: 10, fontWeight: 800, color: '#555', textTransform: 'uppercase', letterSpacing: '.3em', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <Sparkles size={11} style={{ color: th.accent + '88' }} /> Live Neural Synthesis — Auto-Saved
+                            <div className="flex-row gap-6" style={{ marginTop: 16 }}>
+                                <Sparkles size={11} className="text-accent" style={{ opacity: 0.5 }} />
+                                <span className="ia-subtitle" style={{ color: '#554' }}>Live Neural Synthesis — Auto-Saved</span>
                             </div>
                         </main>
 
                         {/* Right sidebar: Studio Pro Suite */}
                         <aside className="ia-sidebar-right" style={{ display: 'flex', flexDirection: 'column', background: th.surface, borderLeft: `1px solid ${th.border}`, overflow: 'hidden' }}>
                             {/* Tab Header */}
-                            <div style={{ display: 'flex', borderBottom: `1px solid ${th.border}`, background: th.surface }}>
+                            <div className="flex-row" style={{ borderBottom: `1px solid ${th.border}`, background: th.surface }}>
                                 {(['props', 'ai', 'auditor'] as const).map(tab => (
                                     <button key={tab} title={tab.toUpperCase()} onClick={() => setRightActiveTab(tab)}
-                                        style={{ flex: 1, padding: '12px', background: rightActiveTab === tab ? 'transparent' : `${th.bg}44`, border: 'none', borderBottom: rightActiveTab === tab ? `2px solid ${th.accent}` : '2px solid transparent', color: rightActiveTab === tab ? th.accent : '#666', cursor: 'pointer', transition: 'all .2s', display: 'flex', justifyContent: 'center' }}>
+                                        className="flex-center"
+                                        style={{ flex: 1, padding: '12px', background: rightActiveTab === tab ? 'transparent' : `${th.bg}44`, border: 'none', borderBottom: rightActiveTab === tab ? `2px solid ${th.accent}` : '2px solid transparent', color: rightActiveTab === tab ? th.accent : '#666', cursor: 'pointer', transition: 'all .2s' }}>
                                         {tab === 'props' ? <Settings2 size={16} /> : tab === 'ai' ? <MessageSquare size={16} /> : <Activity size={16} />}
                                     </button>
                                 ))}
@@ -1077,9 +1387,9 @@ export default function BuilderApp() {
                                 {rightActiveTab === 'props' ? (
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                         <div className="ia-section" style={{ borderBottom: `1px solid ${th.border}`, background: th.bg }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <Settings2 size={16} style={{ color: th.accent }} />
-                                                <span style={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.15em' }}>Properties</span>
+                                            <div className="flex-row gap-8">
+                                                <Settings2 size={16} className="text-accent" />
+                                                <span className="ia-label">Properties</span>
                                             </div>
                                         </div>
 
@@ -1103,26 +1413,26 @@ export default function BuilderApp() {
                                                         <div>
                                                             <div className="ia-label" style={{ marginBottom: 6 }}>{selectedEl.type === 'image' ? 'Image URL' : 'Label / Content'}</div>
                                                             {selectedEl.type === 'textarea' ? (
-                                                                <textarea value={selectedEl.label} onChange={e => updateLabel(selectedEl.id, e.target.value)} className="ia-input" rows={3} style={{ resize: 'vertical' }} />
+                                                                <textarea title="Edit content" value={selectedEl.label} onChange={e => updateLabel(selectedEl.id, e.target.value)} className="ia-input" rows={3} style={{ resize: 'vertical' }} />
                                                             ) : (
-                                                                <input type="text" value={selectedEl.label} onChange={e => updateLabel(selectedEl.id, e.target.value)} className="ia-input" />
+                                                                <input title="Edit content" type="text" value={selectedEl.label} onChange={e => updateLabel(selectedEl.id, e.target.value)} className="ia-input" />
                                                             )}
                                                         </div>
 
                                                         {/* Colors */}
                                                         <div>
                                                             <div className="ia-label" style={{ marginBottom: 8 }}>Colors</div>
-                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                                            <div className="ia-grid-2">
                                                                 {[{ key: 'bg', label: 'Background' }, { key: 'color', label: 'Text' }, { key: 'borderColor', label: 'Border' }].map(({ key, label }) => (
-                                                                    <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                                    <div key={key} className="flex-col gap-4">
                                                                         <span style={{ fontSize: 9, fontWeight: 800, color: '#666', textTransform: 'uppercase', letterSpacing: '.1em' }}>{label}</span>
-                                                                        <input type="color" value={(selectedEl.props as any)[key] || '#000000'} onChange={e => updateProps(selectedEl.id, { [key]: e.target.value })}
+                                                                        <input title={`Edit ${label}`} type="color" value={(selectedEl.props as any)[key] || '#000000'} onChange={e => updateProps(selectedEl.id, { [key]: e.target.value })}
                                                                             style={{ width: '100%', height: 36, borderRadius: 8, border: `1px solid ${th.border}`, background: th.bg, cursor: 'pointer', padding: 2 }} />
                                                                     </div>
                                                                 ))}
-                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: '2/-1' }}>
+                                                                <div className="flex-col gap-4" style={{ gridColumn: '2/-1' }}>
                                                                     <span style={{ fontSize: 9, fontWeight: 800, color: '#666', textTransform: 'uppercase', letterSpacing: '.1em' }}>Reset Colors</span>
-                                                                    <button className="ia-btn ia-btn-ghost" style={{ border: `1px solid ${th.border}`, borderRadius: 8, fontSize: 10, fontWeight: 700 }}
+                                                                    <button className="ia-btn ia-btn-ghost w-full" style={{ border: `1px solid ${th.border}`, borderRadius: 8, fontSize: 10, fontWeight: 700 }}
                                                                         onClick={() => updateProps(selectedEl.id, { bg: '', color: '', borderColor: '' })}>Reset</button>
                                                                 </div>
                                                             </div>
@@ -1131,7 +1441,7 @@ export default function BuilderApp() {
                                                         {/* Font Size */}
                                                         <div>
                                                             <div className="ia-label" style={{ marginBottom: 8 }}>Font Size</div>
-                                                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                                            <div className="flex-row gap-4" style={{ flexWrap: 'wrap' }}>
                                                                 {(['xs', 'sm', 'base', 'lg', 'xl', '2xl'] as const).map(s => (
                                                                     <button key={s} className="ia-btn" onClick={() => updateProps(selectedEl.id, { fontSize: s })}
                                                                         style={{ padding: '4px 10px', borderRadius: 8, fontSize: 10, fontWeight: 800, background: selectedEl.props.fontSize === s ? `${th.accent}22` : th.bg, color: selectedEl.props.fontSize === s ? th.accent : '#666', border: `1px solid ${selectedEl.props.fontSize === s ? `${th.accent}44` : th.border}`, cursor: 'pointer' }}>
@@ -1144,9 +1454,9 @@ export default function BuilderApp() {
                                                         {/* Alignment */}
                                                         <div>
                                                             <div className="ia-label" style={{ marginBottom: 8 }}>Text Align</div>
-                                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                            <div className="flex-row gap-4">
                                                                 {([{ v: 'left', I: AlignLeft }, { v: 'center', I: AlignCenter }, { v: 'right', I: AlignRight }] as const).map(({ v, I }) => (
-                                                                    <button key={v} className="ia-btn" onClick={() => updateProps(selectedEl.id, { align: v })}
+                                                                    <button key={v} title={`Align ${v}`} className="ia-btn" onClick={() => updateProps(selectedEl.id, { align: v })}
                                                                         style={{ flex: 1, padding: '8px', borderRadius: 8, background: selectedEl.props.align === v ? `${th.accent}22` : th.bg, color: selectedEl.props.align === v ? th.accent : '#666', border: `1px solid ${selectedEl.props.align === v ? `${th.accent}44` : th.border}`, cursor: 'pointer' }}>
                                                                         <I size={14} style={{ margin: '0 auto' }} />
                                                                     </button>
@@ -1157,7 +1467,7 @@ export default function BuilderApp() {
                                                         {/* Border Radius */}
                                                         <div>
                                                             <div className="ia-label" style={{ marginBottom: 6 }}>Border Radius: {selectedEl.props.radius ?? 16}px</div>
-                                                            <input type="range" min={0} max={64} value={selectedEl.props.radius ?? 16}
+                                                            <input title="Border Radius" type="range" min={0} max={64} value={selectedEl.props.radius ?? 16}
                                                                 onChange={e => updateProps(selectedEl.id, { radius: Number(e.target.value) })}
                                                                 style={{ width: '100%', accentColor: th.accent }} />
                                                         </div>
@@ -1165,7 +1475,7 @@ export default function BuilderApp() {
                                                         {/* Padding */}
                                                         <div>
                                                             <div className="ia-label" style={{ marginBottom: 6 }}>Padding: {selectedEl.props.padding ?? 4}</div>
-                                                            <input type="range" min={0} max={16} value={selectedEl.props.padding ?? 4}
+                                                            <input title="Padding" type="range" min={0} max={16} value={selectedEl.props.padding ?? 4}
                                                                 onChange={e => updateProps(selectedEl.id, { padding: Number(e.target.value) })}
                                                                 style={{ width: '100%', accentColor: th.accent }} />
                                                         </div>
@@ -1173,7 +1483,7 @@ export default function BuilderApp() {
                                                         {/* Width */}
                                                         <div>
                                                             <div className="ia-label" style={{ marginBottom: 8 }}>Width</div>
-                                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                            <div className="flex-row gap-4">
                                                                 {(['auto', 'half', 'full'] as const).map(w => (
                                                                     <button key={w} className="ia-btn" onClick={() => updateProps(selectedEl.id, { width: w })}
                                                                         style={{ flex: 1, padding: '6px', borderRadius: 8, fontSize: 10, fontWeight: 800, background: selectedEl.props.width === w ? `${th.accent}22` : th.bg, color: selectedEl.props.width === w ? th.accent : '#666', border: `1px solid ${selectedEl.props.width === w ? `${th.accent}44` : th.border}`, cursor: 'pointer' }}>
@@ -1184,23 +1494,23 @@ export default function BuilderApp() {
                                                         </div>
 
                                                         {/* Advanced Styles */}
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 0', borderTop: `1px solid ${th.border}` }}>
+                                                        <div className="flex-col gap-16" style={{ padding: '16px 0', borderTop: `1px solid ${th.border}` }}>
                                                             <div className="ia-label">Advanced Styles</div>
 
-                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                                                <div>
-                                                                    <div style={{ fontSize: 9, fontWeight: 800, color: '#666', textTransform: 'uppercase', marginBottom: 4 }}>Blur (px)</div>
-                                                                    <input type="range" min={0} max={40} value={selectedEl.props.blur || 0} onChange={e => updateProps(selectedEl.id, { blur: Number(e.target.value) })} style={{ width: '100%', accentColor: th.accent }} />
+                                                            <div className="ia-grid-2" style={{ gap: 12 }}>
+                                                                <div className="flex-col gap-4">
+                                                                    <div className="ia-subtitle">Blur (px)</div>
+                                                                    <input title="Blur Strength" type="range" min={0} max={40} value={selectedEl.props.blur || 0} onChange={e => updateProps(selectedEl.id, { blur: Number(e.target.value) })} style={{ width: '100%', accentColor: th.accent }} />
                                                                 </div>
-                                                                <div>
-                                                                    <div style={{ fontSize: 9, fontWeight: 800, color: '#666', textTransform: 'uppercase', marginBottom: 4 }}>Opacity (%)</div>
-                                                                    <input type="range" min={0} max={100} value={selectedEl.props.opacity ?? 100} onChange={e => updateProps(selectedEl.id, { opacity: Number(e.target.value) })} style={{ width: '100%', accentColor: th.accent }} />
+                                                                <div className="flex-col gap-4">
+                                                                    <div className="ia-subtitle">Opacity (%)</div>
+                                                                    <input title="Opacity Level" type="range" min={0} max={100} value={selectedEl.props.opacity ?? 100} onChange={e => updateProps(selectedEl.id, { opacity: Number(e.target.value) })} style={{ width: '100%', accentColor: th.accent }} />
                                                                 </div>
                                                             </div>
 
-                                                            <div>
-                                                                <div style={{ fontSize: 9, fontWeight: 800, color: '#666', textTransform: 'uppercase', marginBottom: 8 }}>Shadow Preset</div>
-                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                                                            <div className="flex-col gap-8">
+                                                                <div className="ia-subtitle">Shadow Preset</div>
+                                                                <div className="ia-grid-3" style={{ gap: 4 }}>
                                                                     {(['none', 'soft', 'medium', 'deep', 'glow'] as const).map(s => (
                                                                         <button key={s} className="ia-btn" onClick={() => updateProps(selectedEl.id, { shadow: s })}
                                                                             style={{ padding: '6px', borderRadius: 8, fontSize: 9, fontWeight: 800, background: selectedEl.props.shadow === s ? `${th.accent}22` : th.bg, color: selectedEl.props.shadow === s ? th.accent : '#666', border: `1px solid ${selectedEl.props.shadow === s ? `${th.accent}44` : th.border}` }}>
@@ -1210,9 +1520,9 @@ export default function BuilderApp() {
                                                                 </div>
                                                             </div>
 
-                                                            <div>
-                                                                <div style={{ fontSize: 9, fontWeight: 800, color: '#666', textTransform: 'uppercase', marginBottom: 8 }}>Gradient Preset</div>
-                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
+                                                            <div className="flex-col gap-8">
+                                                                <div className="ia-subtitle">Gradient Preset</div>
+                                                                <div className="ia-grid-2" style={{ gap: 4 }}>
                                                                     {[
                                                                         { l: 'None', v: '' },
                                                                         { l: 'Purple', v: 'linear-gradient(to right, #a855f7, #6366f1)' },
@@ -1241,12 +1551,12 @@ export default function BuilderApp() {
                                                         </div>
 
                                                         {/* Actions */}
-                                                        <div style={{ display: 'flex', gap: 8, paddingTop: 16, borderTop: `1px solid ${th.border}` }}>
-                                                            <button className="ia-btn ia-btn-ghost" style={{ flex: 1, border: `1px solid ${th.border}`, borderRadius: 10, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                                                        <div className="flex-row gap-8" style={{ paddingTop: 16, borderTop: `1px solid ${th.border}` }}>
+                                                            <button className="ia-btn ia-btn-ghost flex-center w-full gap-6" style={{ border: `1px solid ${th.border}`, borderRadius: 10, fontSize: 11, fontWeight: 700 }}
                                                                 onClick={() => duplicateElement(selectedEl.id)}>
                                                                 <Copy size={13} /> Duplicate
                                                             </button>
-                                                            <button className="ia-btn" style={{ padding: '8px 16px', borderRadius: 10, background: '#ef444422', border: '1px solid #ef444433', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                                                            <button className="ia-btn flex-row flex-center gap-6" style={{ padding: '8px 16px', borderRadius: 10, background: '#ef444422', border: '1px solid #ef444433', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}
                                                                 onClick={() => deleteElement(selectedEl.id)}>
                                                                 <Trash2 size={13} /> Delete
                                                             </button>
@@ -1259,9 +1569,9 @@ export default function BuilderApp() {
                                         {/* Bottom: export shortcuts */}
                                         <div className="ia-section" style={{ borderTop: `1px solid ${th.border}` }}>
                                             <div className="ia-label" style={{ marginBottom: 10 }}>Quick Export</div>
-                                            <div style={{ display: 'flex', gap: 6 }}>
+                                            <div className="flex-row gap-6">
                                                 {(['tsx', 'html', 'json'] as const).map(f => (
-                                                    <button key={f} className="ia-btn" style={{ flex: 1, padding: '7px 0', borderRadius: 9, fontSize: 10, fontWeight: 800, background: th.bg, color: '#888', border: `1px solid ${th.border}`, cursor: 'pointer' }}
+                                                    <button key={f} className="ia-btn w-full" style={{ padding: '7px 0', borderRadius: 9, fontSize: 10, fontWeight: 800, background: th.bg, color: '#888', border: `1px solid ${th.border}`, cursor: 'pointer' }}
                                                         onClick={() => { setCodeFormat(f); setActiveTab('code'); }}>
                                                         {f.toUpperCase()}
                                                     </button>
@@ -1284,7 +1594,7 @@ export default function BuilderApp() {
                                         </div>
                                         <div style={{ padding: 12, borderTop: `1px solid ${th.border}`, background: th.surface }}>
                                             <div style={{ position: 'relative' }}>
-                                                <input title="Chat" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMessage()} placeholder="Ask AI..." className="ia-input" style={{ paddingRight: 40 }} />
+                                                <input title="Type your message" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMessage()} placeholder="Ask AI..." className="ia-input" style={{ paddingRight: 40 }} />
                                                 <button title="Send" onClick={sendMessage} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: th.accent, cursor: 'pointer' }}><Send size={16} /></button>
                                             </div>
                                         </div>
